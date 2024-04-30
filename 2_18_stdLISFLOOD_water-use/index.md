@@ -38,9 +38,9 @@ Paddy-rice irrigation water demand is simulated as described in the [dedicated c
 
 ### Domestic use
 
-This demand reprents the requirements of the public water supply network, which can be obtained by downscaling national reported data with higher resolution population maps. A NetCDF file provides the domestic demand in mm/(day·pixel); this file is indicated in the settings file using the parameter `PrefixWaterUseDomestic`, which by default takes the value _"dom"_.
+This water demanded by the public water supply network can be obtained by downscaling national reported data with higher resolution population maps. A NetCDF file provides the domestic demand in mm/(day·pixel); this file is indicated in the settings file using the parameter `PrefixWaterUseDomestic`, which by default takes the value _"dom"_.
 
-LISFLOOD considers leakages in the public supply network. The proportion of water loss in the system can be specified in the paraemter `LeakageFraction` of settings file either as a constant or as a map:
+LISFLOOD considers leakages in the public supply network. The proportion of water loss in the system can be specified in the parameter `LeakageFraction` of settings file either as a constant or as a map:
 
 ```xml
 <textvar name="LeakageFraction" value="0.2">
