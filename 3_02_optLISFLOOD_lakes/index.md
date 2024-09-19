@@ -66,9 +66,9 @@ $$S = A \cdot H$$
 
 Where:
 
-> $S$: lake storage [$m^3$] <br>
-> $A$: lake area [$m^2$] <br>
-> $H$: lake water depth [$m$]
+> $S$: lake storage ($m^3$) <br>
+> $A$: lake area ($m^2$) <br>
+> $H$: lake water depth ($m$)
 
 Replacing $S$ and subsequently $H$ according to the previous two assumptions, the equation becomes:
 
@@ -210,6 +210,7 @@ In this section you must define the map locating the lakes and their ID (`LakeSi
             LAKES
             **************************************************************
         </comment>
+        
         <textvar name="LakeSites" value="$(PathMaps)/lakes.nc">
             <comment>
                 Map with location of lakes
