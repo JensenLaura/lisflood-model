@@ -3,13 +3,7 @@
 
 ### Introduction
 
-This page describes the LISFLOOD lake routine, and how it is used. The simulation of lakes is *optional*, and it can be activated by adding the following line to the `lfoptions` element in the LISFLOOD settings file:
-
-```xml 
-	<setoption name="simulateLakes" choice="1" />
-```
-
-Lakes can be simulated on channel pixels where kinematic wave routing is used. The routine does NOT work for channel stretches where the dynamic wave is used!
+This page describes the LISFLOOD lake routine, and how it is used. Lakes can be simulated on channel pixels where kinematic wave routing is used. The routine does NOT work for channel stretches where the dynamic wave is used!
 
 ### Description of the lake routine
 
@@ -40,9 +34,9 @@ Simply stated, the change in storage is equal to inflow minus outflow. To solve 
 
 ***Figure:*** *Relation between water depth, lake outflow and lake storage*    
 
-#### Modified Puls Approach (see also [Maniak, 1997](https://www.springerprofessional.de/hydrologie-und-wasserwirtschaft/13343324))
+#### Modified Puls Approach
 
-The modified Puls approach suggests rewriting the equation above as follows:
+The modified Puls (see also [Maniak, 1997](https://www.springerprofessional.de/hydrologie-und-wasserwirtschaft/13343324)) approach suggests rewriting the equation above as follows:
 
 $$\frac{S_2}{\Delta t} + \frac{Q_{out2}}{2} = \frac{S_1}{\Delta t} + \frac{Q_{in1} + Q_{in2} - Q_{out1}}{2} = SI$$
 
@@ -96,7 +90,7 @@ Where:
 > $LakeFactor = \frac{A}{\Delta t \cdot \sqrt{\alpha}}$<br>
 > $SI = \frac{S_1}{\Delta t} + \frac{Q_{in1} + Q_{in2} - Q_{out1}}{2}$
 
-### Initialisation of the lake routine
+### Initialisation
 
 Because lakes (especially large ones) tend to produce a relatively slow response over time, it is important to make sure that the initial lake level is set to a more or less sensible value. LISFLOOD has two options for the initial value:
 
@@ -106,7 +100,7 @@ Because lakes (especially large ones) tend to produce a relatively slow response
 
 Below there is an example on how to estimate the net lake inflow. Be aware that the calculation can be less straightforward for very large lakes with multiple inlets (which are not well represented by the current point approach anyway):
    
-#### Example: estimating average net lake inflow
+#### Example: estimation of average net inflow
 
 Lake characteristics:
 
@@ -115,13 +109,13 @@ Lake characteristics:
 > mean annual discharge upstream of lake: $\bar{I} = 300\ m^3/s$ <br>
 > mean annual evaporation: $\bar{EW} = 1100\ mm/yr$ <br>
 
-##### <u>Method 1: using average outflow</u>
+<u>Method 1: using average outflow</u>
 
 Assuming lake is in quasi steady-state:
 
 $\bar{I} = \bar{O} = 293\ \frac{m^3}{s}$                                                  
 
-##### <u>Method 2: using average inflow and evaporation</u>
+<u>Method 2: using average inflow and evaporation</u>
 
 Only use this method in case that outflow data is not available.                 
 
@@ -133,7 +127,7 @@ $\bar{EW}[\frac{m^3}{s}] = \bar{EW}[\frac{m}{yr}] \cdot A[m^2] = 1100\ \frac{mm}
  
 $\bar{I}_n = \bar{I} - \bar{EW} = 300 \frac{m^3}{s} \ - 7.5\ \frac{m^3}{s}= 292.5\ \frac{m^3}{s}$
 
-### Preparation of input data
+### Input data
 
 The lake locations are defined on a (nominal) map called **_lakes.nc_**. It is important that all lakes are located on a channel pixel; you can verify this by displaying the lake map on top of the channel map. Also, since each lake receives its inflow from its upstream neighbouring channel pixel, you may want to check if each lake has any upstream channel pixels at all; if not, the lake will just gradually empty during a model run!. The lake characteristics are described by 3 tables. The following table lists all required inputs:
 
@@ -155,137 +149,154 @@ The lake locations are defined on a (nominal) map called **_lakes.nc_**. It is i
 
 ***Figure:** Placement of the lakes: lakes on the outflow point (left) result in erroneous behavior of the lake routine.*
 
-### Preparation of settings file
+### Settings file
 
-All in- and output files need to be defined in the settings file. If you are using a default LISFLOOD settings template, all file definitions are already defined in the **`lfbinding`** element. Make sure that the map with the lake locations is in the "maps" directory, and all tables in the "tables" directory. If this is the case, you only have to specify the initial lake level and, if you are using the steady-state option, the mean net lake inflow (make this a map if you're simulating multiple lakes simultaneously). Both can be set in the **`lfuser`** element. *LakeInitialLevelValue* can be either a map or a single value. Setting *LakeInitialLevelValue* to *-9999* will cause LISFLOOD to calculate the steady-state level. 
+All in- and output files need to be defined in the settings file. If you are using a default LISFLOOD settings template, all file definitions are already defined in the **`lfbinding`** element. Make sure that the map with the lake locations is in the "maps" directory (`PathMaps` variable in the settings file), and all tables in the "tables" directory (`PathTables`). If this is the case, you only have to specify the initial lake level and, if you are using the steady-state option, the mean net lake inflow (make this a map if you're simulating multiple lakes simultaneously). Both can be set in the **`lfuser`** element. *LakeInitialLevelValue* can be either a map or a single value. Setting *LakeInitialLevelValue* to *-9999* will cause LISFLOOD to calculate the steady-state level. 
 
-So we add this to the **`lfuser`** element (if it is not there already):
+#### `lfoptions`
+
+The simulation of lakes is *optional*, and it can be activated by adding the following line to the `lfoptions` element in the LISFLOOD settings file:
 
 ```xml
-<group>
-    <comment> 
-        ************************************************************** 
-        LAKE OPTION
-        **************************************************************
-    </comment>
-    
-    <textvar name="LakeInitialLevelValue" value="-9999">
-        <comment>
-            Initial lake level [m]
-            -9999 sets initial value to steady-state level
-        </comment>
-    </textvar>
-    
-    <textvar name="TabLakeAvNetInflowEstimate" value="$(PathTables)/lakeavinflow.txt">
-        <comment>
-            Estimate of average net inflow into lake (=inflow -- evaporation) [m3/s]
-            Used to calculated steady-state lake level in case LakeInitialLevelValue is set to -9999
-        </comment>
-    </textvar>
-</group>
+<lfoptions>
+    ...
+    <setoption name="simulateLakes" choice="1" />
+    ...
+</lfoptions>
 ```
 
-And in the **`lfbinding`** section of the settings file:
+#### `lfuser`
+
+In this section you define the initialization of the lake. `LakeInitialLevelValue` can be either a map or a single value. If set to -9999, LISFLOOD will calculate the steady-state level, for which you need to provide the average net inflow (make this a map if you're simulating multiple lakes simultaneously).
 
 ```xml
-<group>
-    <comment>
-        **************************************************************
-        LAKES
-        **************************************************************
-    </comment>
-    <textvar name="LakeSites" value="$(PathMaps)/lakes.nc">
-        <comment>
-            Map with location of lakes
+<lfuser>
+    ...
+    <group>
+        <comment> 
+            ************************************************************** 
+            LAKE OPTION
+            **************************************************************
         </comment>
-    </textvar>
 
-    <textvar name="LakeInitialLevelValue" value="$(LakeInitialLevelValue)">
-        <comment>
-            Initial lake level [m]
-            -9999 sets initial value to steady-state level
-        </comment>
-    </textvar>
-    
-    <textvar name="TabLakeAvNetInflowEstimate" value="$(TabLakeAvNetInflowEstimate)">
-        <comment>
-            Estimate of average net inflow into lake (=inflow - evaporation) [m3/s]
-            Used to calculated steady-state lake level in case LakeInitialLevelValue
-            is set to -9999
-        </comment>
-    </textvar>
-    
-    <comment>
-        ------------
-        Input tables
-        ------------
-    </comment>
+        <textvar name="LakeInitialLevelValue" value="-9999">
+            <comment>
+                Initial lake level [m]
+                -9999 sets initial value to steady-state level
+            </comment>
+        </textvar>
 
-    <textvar name="TabLakeArea" value="$(PathTables)/lakearea.txt">
-        <comment>
-            Lake surface area [m²]
-        </comment>
-    </textvar>
-
-    <textvar name="TabLakeA" value="$(PathTables)/lakea.txt">
-        <comment>
-            Lake parameter alpha
-        </comment>
-    </textvar>
-
-    <comment>
-        ------------------
-        Output time series
-        ------------------
-    </comment>
-
-    <textvar name="LakeInflowTS" value="$(PathOut)/qLakeIn.tss">
-        <comment>
-            Output timeseries file with lake inflow [m3/s]
-        </comment>
-    </textvar>
-
-    <textvar name="LakeOutflowTS" value="$(PathOut)/qLakeOut.tss">
-        <comment>
-            Output timeseries file with lake outflow [m3/s]
-        </comment>
-    </textvar>
-
-    <textvar name="LakeEWTS" value="$(PathOut)/EWLake.tss">
-        <comment>
-            Output timeseries file with lake evaporation [mm / time step]
-        </comment>
-    </textvar>
-
-    <textvar name="LakeLevelTS" value="$(PathOut)/hLake.tss">
-        <comment>
-            Output timeseries file with lake level [m]
-        </comment>
-    </textvar>
-
-    <textvar name="LakeLevelState" value="$(PathOut)/lakh">
-        <comment>
-            Output map(s) with lake level [m]
-        </comment>
-    </textvar>
-
-</group>
+        <textvar name="TabLakeAvNetInflowEstimate" value="$(PathTables)/lakeavinflow.txt">
+            <comment>
+                Estimate of average net inflow into lake (=inflow -- evaporation) [m3/s]
+                Used to calculated steady-state lake level in case LakeInitialLevelValue is set to -9999
+            </comment>
+        </textvar>
+    </group>
+    ...
+</lfuser>
 ```
 
-Finally, you have to tell LISFLOOD that you want to simulate lakes! To do this, add the following statement to the **`lfoptions`** element:
+#### `lfbinding`
+
+In this section you must define the map locating the lakes and their ID (`LakeSites`), the tables that specify the lake parameters (`TabLakeArea` and `TabLakeA`), and the output files.
 
 ```xml
-<setoption name="simulateLakes" choice="1" />
+<lfbinding>
+    ...
+    <group>
+        <comment>
+            **************************************************************
+            LAKES
+            **************************************************************
+        </comment>
+        <textvar name="LakeSites" value="$(PathMaps)/lakes.nc">
+            <comment>
+                Map with location of lakes
+            </comment>
+        </textvar>
+
+        <textvar name="LakeInitialLevelValue" value="$(LakeInitialLevelValue)">
+            <comment>
+                Initial lake level [m]
+                -9999 sets initial value to steady-state level
+            </comment>
+        </textvar>
+
+        <textvar name="TabLakeAvNetInflowEstimate" value="$(TabLakeAvNetInflowEstimate)">
+            <comment>
+                Estimate of average net inflow into lake (=inflow - evaporation) [m3/s]
+                Used to calculated steady-state lake level in case LakeInitialLevelValue
+                is set to -9999
+            </comment>
+        </textvar>
+
+        <comment>
+            ------------
+            Input tables
+            ------------
+        </comment>
+
+        <textvar name="TabLakeArea" value="$(PathTables)/lakearea.txt">
+            <comment>
+                Lake surface area [m²]
+            </comment>
+        </textvar>
+
+        <textvar name="TabLakeA" value="$(PathTables)/lakea.txt">
+            <comment>
+                Lake parameter alpha
+            </comment>
+        </textvar>
+
+        <comment>
+            ------------------
+            Output time series
+            ------------------
+        </comment>
+
+        <textvar name="LakeInflowTS" value="$(PathOut)/qLakeIn.tss">
+            <comment>
+                Output timeseries file with lake inflow [m3/s]
+            </comment>
+        </textvar>
+
+        <textvar name="LakeOutflowTS" value="$(PathOut)/qLakeOut.tss">
+            <comment>
+                Output timeseries file with lake outflow [m3/s]
+            </comment>
+        </textvar>
+
+        <textvar name="LakeEWTS" value="$(PathOut)/EWLake.tss">
+            <comment>
+                Output timeseries file with lake evaporation [mm / time step]
+            </comment>
+        </textvar>
+
+        <textvar name="LakeLevelTS" value="$(PathOut)/hLake.tss">
+            <comment>
+                Output timeseries file with lake level [m]
+            </comment>
+        </textvar>
+
+        <textvar name="LakeLevelState" value="$(PathOut)/lakh">
+            <comment>
+                Output map(s) with lake level [m]
+            </comment>
+        </textvar>
+    </group>
+    ...
+</lfbinding>
 ```
 
 Now you are ready to run the model. If you want to compare the model results both with and without the inclusion of lakes, you can switch off the simulation of lakes either by:
 
-- Removing the '*simulateLakes*' statement from the `lfoptions` element, or
+- Removing the `simulateLakes` statement from the `lfoptions` element, or
 - changing it into `<setoption name="simulateLakes" choice="0" />`
 
 Both have exactly the same effect. You don't need to change anything in either `lfuser` or `lfbinding`; all file definitions here are simply ignored during the execution of the model.
 
-### Lake output files
+### Output files
 
 The lake routine produces 4 additional time series and one map (or stack of maps), as listed in the following table:
 
@@ -304,7 +315,16 @@ The lake routine produces 4 additional time series and one map (or stack of maps
 Note that you can use the map with the lake level at the last time step to define the initial conditions for a succeeding simulation, e.g.:
 
 ```xml
-<textvar name="LakeInitialLevelValue" value="/mycatchment/lakh0000.730">
+<lfuser>
+    ...
+    <textvar name="LakeInitialLevelValue" value="/mycatchment/lakh0000.730">
+        <comment>
+            Initial lake level [m]
+            -9999 sets initial value to steady-state level
+        </comment>
+    </textvar>
+    ...
+</lfuser>
 ```
 
 [🔝](#top)
