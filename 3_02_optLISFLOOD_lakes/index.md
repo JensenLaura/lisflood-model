@@ -26,12 +26,13 @@ $$Q_{in}(t) - Q_{out}(t) = \frac{\Delta S}{\Delta t}$$
 $$\frac{Q_{in1} + Q_{in2}}{2} - \frac{Q_{out1} + Q_{out2}}{2} = \frac{S_2-S_1}{\Delta t}$$
 
 Where:
-   <br>$Q_{in1}$:  Inflow to lake at time $1$ ($t$)
-   <br>$Q_{in2}$:  Inflow to lake at time $2$ ($t+\Delta t$)
-   <br>$Q_{out1}$:  Outflow from lake at time $1$ ($t$)
-   <br>$Q_{out2}$:  Outflow from lake at time $2$ ($t+\Delta t$)
-   <br>$S_1$: Lake storage at time 1 ($t$)
-   <br>$S_2$: Lake storage at time 2 ($t+\Delta t$)
+
+> $Q_{in1}$:  Inflow to lake at time $1$ ($t$) <br>
+> $Q_{in2}$:  Inflow to lake at time $2$ ($t+\Delta t$) <br>
+> $Q_{out1}$:  Outflow from lake at time $1$ ($t$) <br>
+> $Q_{out2}$:  Outflow from lake at time $2$ ($t+\Delta t$) <br>
+> $S_1$: Lake storage at time 1 ($t$) <br>
+> $S_2$: Lake storage at time 2 ($t+\Delta t$)
 
 Simply stated, the change in storage is equal to inflow minus outflow. To solve this equation we require the lake storage curve $S=f(H)$ and the rating curve $Q_{out}=g(H)$. Lake storage and discharge have to be linked to each other by the water depth (see figure).
 
@@ -49,23 +50,31 @@ All the terms in the right-hand side of this equation ($SI$) are known, since $S
 
 For the left term, two assumptions are made here to simplify and speed up the solution of the modified Puls approach:
 
-1.  The outflow of the lake is based on a modification of Poleni's equation for rectangular weir ([Bollrich & Preißler, 1992](https://www.dinmedia.de/de/publikation/technische-hydromechanik-1/302162852)): 
+The first assumption is that the outflow of the lake is based on a modification of Poleni's equation for rectangular weir ([Bollrich & Preißler, 1992](https://www.dinmedia.de/de/publikation/technische-hydromechanik-1/302162852)): 
+
 $$Q = \frac{2}{3} \cdot c \cdot b \sqrt{2g}  H^{3/2}$$
-    Assuming the weir is not rectangular, but parabolic, we can simplify this equation to:
+    
+Assuming the weir is not rectangular, but parabolic, we can simplify this equation to:
+
 $$Q = \alpha \cdot H^2$$
-    where:
-      <br>$Q$:  outflow discharge,
-      <br>$H$:  lake water depth,
-      <br>$\alpha$: parameter that combines channel width ($b$), gravity ($g$) and weir coefficient ($c$).
+    
+Where:
 
-    The parameter $\alpha$ is a calibration coeffient. Specifically, it is computed as follows: $\alpha = \alpha_1 \cdot \alpha_{Mult}$, where   $\alpha_1$ is a first estimate of the value of $\alpha$ **(often equal to the width of the lake outlet)** and $\alpha_{Mult}$ is defined during calibration.
+> $Q$:  outflow discharge <br>
+> $H$:  lake water depth <br>
+> $\alpha$: parameter that combines channel width ($b$), gravity ($g$) and weir coefficient ($c$)
 
-2.  The best approach for a sea level vs. lake storage function would be a lookup table. LISFLOOD assumes instead a linear approach as a simplification: 
+The parameter $\alpha$ is a calibration coeffient. Specifically, it is computed as follows: $\alpha = \alpha_1 \cdot \alpha_{Mult}$, where   $\alpha_1$ is a first estimate of the value of $\alpha$ **(often equal to the width of the lake outlet)** and $\alpha_{Mult}$ is defined during calibration.
+
+The second assumption is related to the relation between level and storage. The best approach for a sea level versus lake storage function would be a lookup table. Instead, LISFLOOD assumes a linear approach as a simplification: 
+
 $$S = A \cdot H$$
-    where:
-      <br>$S$: lake storage [$m^3$]
-      <br>$A$: lake area [$m^2$]
-      <br>$H$: lake water depth [$m$]
+
+Where:
+
+> $S$: lake storage [$m^3$] <br>
+> $A$: lake area [$m^2$] <br>
+> $H$: lake water depth [$m$]
 
 Replacing $S$ and subsequently $H$ according to the previous two assumptions, the equation becomes:
 
@@ -83,8 +92,9 @@ Its solution is:
 $$Q_{out2} = \left( -LakeFactor + \sqrt{LakeFactor^2 + 2 \cdot SI} \right)^2$$
 
 Where:
-   <br>$LakeFactor = \frac{A}{\Delta t \cdot \sqrt{\alpha}}$
-   <br>$SI = \frac{S_1}{\Delta t} + \frac{Q_{in1} + Q_{in2} - Q_{out1}}{2}$
+
+> $LakeFactor = \frac{A}{\Delta t \cdot \sqrt{\alpha}}$<br>
+> $SI = \frac{S_1}{\Delta t} + \frac{Q_{in1} + Q_{in2} - Q_{out1}}{2}$
 
 ### Initialisation of the lake routine
 
@@ -108,7 +118,7 @@ Below there is an example on how to estimate the net lake inflow. Be aware that 
 
 Assuming lake is in quasi steady-state:
 
-$\bar{EW} = \bar{O} = 293\ \frac{m^3}{s}$                                                  
+$\bar{I} = \bar{O} = 293\ \frac{m^3}{s}$                                                  
 
 ##### <u>Method 2: using average inflow and evaporation</u>
 
@@ -120,7 +130,7 @@ $\bar{EW}[\frac{m^3}{s}] = \bar{EW}[\frac{m}{yr}] \cdot A[m^2] = 1100\ \frac{mm}
 
 2.  Compute net inflow:
  
-$\bar{EW} = \bar{I} - \bar{EW} = 300 \frac{m^3}{s} \ - 7.5\ \frac{m^3}{s}= 292.5\ \frac{m^3}{s}$
+$\bar{I}_n = \bar{I} - \bar{EW} = 300 \frac{m^3}{s} \ - 7.5\ \frac{m^3}{s}= 292.5\ \frac{m^3}{s}$
 
 ### Preparation of input data
 
@@ -128,13 +138,14 @@ The lake locations are defined on a (nominal) map called **_lakes.nc_**. It is i
 
 ***Table:** Inputs required for the lake routine.*                                                                              
 
-| **Maps**                   | **Default name** | **Description**                  | **Units** | **Remarks**                           |
-| -------------------------- | ---------------- | -------------------------------- | --------- | ------------------------------------- |
-| LakeSites                  | lakes.nc        | lake locations                   | -         | nominal                               |
+| Inputs                     | Default name     | Description                      | Units     | Remarks                               |
+| :------------------------- | :--------------- | :------------------------------- | :-------- | :------------------------------------ |
+| **Maps**                   |                  |                                  |           |                                       |
+| LakeSites                  | lakes.nc         | lake locations                   | -         | Nominal, i.e., indicates lake ID      |
 | **Tables**                 |                  |                                  |           |                                       |
 | TabLakeArea                | lakearea.txt     | lake surface area                | $m^2$     |                                       |
-| TabLakeA                   | lakea.txt        | lake joined parameter $\alpha$   | $m/s$     |                 |
-| TabLakeAvNetInflowEstimate | lakeavinflow.txt | Net inflow                       | $m^3/s$   |                                  |
+| TabLakeA                   | lakea.txt        | lake joined parameter $\alpha$   | $m/s$     |                                       |
+| TabLakeAvNetInflowEstimate | lakeavinflow.txt | Net inflow                       | $m^3/s$   |                                       |
 
 
 > **Note.** When you create the map with the lake locations, pay special attention to the following: if a lake is located on the most downstream cell (i.e. the outflow point, see Figure below), the lake routine may produce erroneous output. In particular, the mass balance errors cannot be calculated correctly in that case. The same applies if you simulate only a sub-catchment of a larger map (by selecting the subcatchment in the mask map). This situation can usually be avoided by extending the mask map one pixel downstream.
@@ -280,8 +291,9 @@ The lake routine produces 4 additional time series and one map (or stack of maps
 ***Table:**  Outputs of the lake routine.*
 
 | Maps            | Default name | Description                    | Units           |
-| --------------- | ------------ | ------------------------------ | --------------- |
-| LakeLevelState  | lakhxxxx.xxx | lake level at last time step | $m$             |
+| :-------------- | :----------- | :----------------------------- | :-------------- |
+| **Maps**        |              |                                |                 |
+| LakeLevelState  | lakhxxxx.xxx | lake level at last time step   | $m$             |
 | **Time series** |              |                                |                 |
 | LakeInflowTS    | qLakeIn.tss  | inflow into lakes              | $\frac{m^3}{s}$ |
 | LakeOutflowTS   | qLakeOut.tss | flow out of lakes              | $\frac{m^3}{s}$ |
