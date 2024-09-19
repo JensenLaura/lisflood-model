@@ -92,22 +92,23 @@ Because lakes (especially large ones) tend to produce a relatively slow response
 
 1.  The initial state of the lake can be set using the parameter `LakeInitialLevelValue`, either as a value or as a map from a previous run.
 
-2.  If `LakeInitialLevelValue` is set to `-9999`, the initial lake level will be calculated from a steady-state net-lake inflow \[$m^3/s$\]. The steady-state net-lake inflow is given by a table called *TabLakeAvNetInflowEstimate*. In this table, the average net inflow (inflow minus lake evaporation) is listed. The average net inflow can be estimated using measured discharge and evaporation records. If measured discharge is available just downstream of the lake (i.e. the outflow), the (long-term) average outflow can be used as an estimation of the net inflow, since inflow equals outflow for a steady state situation. If only inflow is available, all average inflows should be summed, and the average lake evaporation should be subtracted from this figure.
+2.  If `LakeInitialLevelValue` is set to `-9999`, the initial lake level will be calculated from a steady-state net-lake inflow. The steady-state net-lake inflow is given by a table called *TabLakeAvNetInflowEstimate*. In this table, the average net inflow (inflow minus lake evaporation) is listed. The average net inflow ($\bar{I}_n$) can be estimated using measured discharge and evaporation records. If measured discharge is available just downstream of the lake (i.e. the outflow), the (long-term) average outflow ($\bar{O}$) can be used as an estimation of the net inflow, since inflow equals outflow for a steady state situation. If only inflow is available, all average inflows should be summed, and the average lake evaporation ($\bar{EW}$) should be subtracted from this figure.
 
 Below there is an example on how to estimate the net lake inflow. Be aware that the calculation can be less straightforward for very large lakes with multiple inlets (which are not well represented by the current point approach anyway):
    
 #### Example: estimating average net lake inflow
 
  Lake characteristics 
- - lake area: $2.15 \cdot 10^8\ m^2$                                            
- - mean annual discharge downstream of lake: $293\ \frac{m^3}{s}$             
- - mean annual discharge upstream of lake: $300\ \frac{m^3}{s}$               
- - mean annual evaporation: $1100\ \frac{mm}{yr}$ 
+ - lake area:                                $A = 2.15 \cdot 10^8\ m^2$
+ - mean annual discharge downstream of lake: $\bar{O} = 293\ \frac{m^3}{s}$
+ - mean annual discharge upstream of lake:   $\bar{I} = 300\ \frac{m^3}{s}$
+ - mean annual evaporation:                  $\bar{EW} = 1100\ \frac{mm}{yr}$
 
 ##### <u>Method 1: using average outflow</u>
 
-Assuming lake is in quasi steady-state:                               
-$averageNetInflow = averageNetOutflow = 293 \frac{m^3}{s}$                                                  
+Assuming lake is in quasi steady-state:
+
+$\bar{EW} = \bar{O} = 293\ \frac{m^3}{s}$                                                  
 
 ##### <u>Method 2: using average inflow and evaporation</u>
 
@@ -115,11 +116,11 @@ Only use this method in case that outflow data is not available.
 
 1. Compute yearly lake evaporation in $m^3 s^{-1}$:
  
-$EW[\frac{m^3}{s}] = EW[\frac{m}{yr}] \cdot A[m^2] = 1100\ \frac{mm}{yr} \cdot \frac{1}{1000·3600·24·365}\ \frac{m·yr}{mm·s} \cdot 2.15 \cdot 10^8\ m^2 = 7.5\ \frac{m^3}{s}$
+$\bar{EW}[\frac{m^3}{s}] = \bar{EW}[\frac{m}{yr}] \cdot A[m^2] = 1100\ \frac{mm}{yr} \cdot \frac{1}{1000·3600·24·365}\ \frac{m·yr}{mm·s} \cdot 2.15 \cdot 10^8\ m^2 = 7.5\ \frac{m^3}{s}$
 
 2.  Compute net inflow:
  
-$averageNetInflow = 300 \frac{m^3}{s} \ - 7.5\ \frac{m^3}{s}= 292.5\ \frac{m^3}{s}$
+$\bar{EW} = \bar{I} - \bar{EW} = 300 \frac{m^3}{s} \ - 7.5\ \frac{m^3}{s}= 292.5\ \frac{m^3}{s}$
 
 ### Preparation of input data
 
