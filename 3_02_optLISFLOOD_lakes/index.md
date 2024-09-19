@@ -108,11 +108,12 @@ Below there is an example on how to estimate the net lake inflow. Be aware that 
    
 #### Example: estimating average net lake inflow
 
- Lake characteristics 
- - lake area:                                $A = 2.15 \cdot 10^8\ m^2$
- - mean annual discharge downstream of lake: $\bar{O} = 293\ \frac{m^3}{s}$
- - mean annual discharge upstream of lake:   $\bar{I} = 300\ \frac{m^3}{s}$
- - mean annual evaporation:                  $\bar{EW} = 1100\ \frac{mm}{yr}$
+Lake characteristics:
+
+> lake area: $A = 2.15 \cdot 10^8\ m^2$ <br>
+> mean annual discharge downstream of lake: $\bar{O} = 293\ m^3/s$ <br>
+> mean annual discharge upstream of lake: $\bar{I} = 300\ m^3/s$ <br>
+> mean annual evaporation: $\bar{EW} = 1100\ mm/yr$ <br>
 
 ##### <u>Method 1: using average outflow</u>
 
