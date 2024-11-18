@@ -1,206 +1,159 @@
 ## Reservoirs
 
+>**To add**. The reservoir routine extracts the inflow from all pixels upstream. Reservoirs can be placed in the outlet of the catchment, and do not need to be moved one pixel downstream.
+
 ### Introduction
 
-This page describes the LISFLOOD reservoirs routine, and how it is used. The simulation of reservoirs is *optional*, and it can be activated by adding the following line to the 'lfoptions' element:
-
-```xml
-	<setoption name="simulateReservoirs" choice="1" />
-```
-
-Reservoirs can be simulated on channel pixels where kinematic wave routing is used. The routine does *not* work for channel stretches where the dynamic wave is used!
+This page describes the LISFLOOD reservoir routine, and how it is used.
 
 ### Description of the reservoir routine 
 
-Reservoirs are simulated as points in the channel network. The inflow into each reservoir, $I [\frac{m^3}{s}]$, equals the channel flow upstream of the reservoir. Operational rules for reservoirs are not included implicitly in LISFLOOD, but the model mimics them by using a number of rules which define reservoir output as a function of the relative filling. The relative filling of a reservoir, $F$, is the ratio between the water volume stored in the reservoir at a specific time step, $V_t\ [m^3]$, and its total storage capacity, $S\ [m^3]$:
+The LISFLOOD reservoir routine is, since version 5, an adaptaion of [Hanazaki et al. (2022)](https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2021MS002944). In this routine, the reservoir release is a function of both the storage ($V_t$) and inflow ($I_t$) at the current time step.
+
+As many other reservoir routines, it divides the reservoir storage capacity in several zones, and applies a different release rule to each of those zones. Specifically, this routine uses three storage values to define four storage zones: 
+* A conservation zone, when the reservoir is in dry conditions ($V_t \leq V_c$). The conservation limit ($V_c$) is assumed as half of the flood limit.
+$$V_c = 0.5 \cdot V_f$$
+* A normal zone, where the reservoir should operate most of the time ($V_c \lt V_t \leq V_f$). The flood limit ($V_f$) is a calibration parameter; in the Hanazaki implementation, it is the 75% percentile of the observed storage time series.
+* A flood zone, when the filling is high, but the reserovir is still safe ($V_f \lt V_t \leq V_e$).
+* An emergency zone, when the reservoir is at risk of overtopping ($V_t \gt V_e$). The emergency limit ($V_e$) is assumed as the upper 20% of the storage above the flood limit.
+$$V_e = S + 0.8 \cdot \left( S - V_f \right)$$
+being $S$ the reservoir storage capacity.
+
+Apart from the storage zone, the routine uses two characteristic release values:
+
+* The minimum release ($Q_{min}$) or environmental flow.
+* The normal release ($Q_n$) is the long-term average inflow ($\bar{I}$):
+$$Q_n = \bar{I}$$
+* The release associated with the flood outflow is a factor of the 100-year return period of inflow ($I_{100}$). The factor $\alpha$ is a calibration parameter; in the Hanazaki implementation it takes the default value of 0.30.
+$$Q_f = \alpha \cdot I_{100}$$
+
+The main difference between the Hanazaki model and the routine used in previous LISFLOOD versions is the addition of the reservoir inflow ($I_t$) as a condition on the release. If the inflow is smaller than a predefined flood discharge ($Q_f$), the release is a quadratic function of storage, so the reservoir stores water if in drier conditions. If the inflow exceeds the flood discharge, the release is a linear function of storage, therefore it is larger and prevents the reservoir from filling. 
+
+The combination of those two conditions —storage and inflow— renders the following six release equations:
 
 $$
-F = \frac{V_t}{S} \in [0, 1]
-$$
-
-There are three _special_ relative filling levels:
-- The _conservative storage limit_, $L_c$, is the lower limit of reservoir water storage (reservoirs are never completely empty).
-- The _flood storage limit_, $L_f$, is the upper limit of the operational relative filling (reservoirs are never filled completly for safety reasons).
-- The _normal storage capacity_, $L_n$, is the available capacity of a reservoir. It is a value in between $L_f$ and $L_c$. 
-
-Three discharge values define the way the outflow $[\frac{m^3}{s}]$ of a reservoir is regulated. 
-- The _minimum outflow_, $Q_{min}$, is the lowest discharge that is maintained for e.g. ecological reasons. 
-- The _non-damaging outflow_, $Q_{nd}$, is the maximum possible outflow that will not cause problems downstream.
-- The _normal outflow_, $Q_{n}$, is the one valid when the reservoir is within its _normal storage_ filling level.
-
-The previous six parameters ($L_c$, $L_f$, $L_n$, $Q_{min}$, $Q_{nd}$, $Q_{n}$) are input data. Apart from them, there are two adimensional calibration parameters that modulate the reservoir behaviour when its normal filling ($L_n$) is exceeded. 
-
-* $\alpha$ defines a new filling level in between $L_n$ and $L_f$. Therefore, it can assume values between 0.01 and 0.99.
-$$
-L_{n,adj} = L_n + \alpha \cdot (L_f - L_n)
-$$
-* $\beta$ defines the outflow at the previous $L_{n,adj}$ filling level. It can assume values between 0.25 and 2.
-$$
-Q_{n,adj} = \beta \cdot Q_{n} \\
-Q_{min} \lt Q_{n,adj} \lt Q_{nd}
-$$
-
-The outflow, $Q \; [\frac{m^3}{s}]$, depends on the reservoir relative filling:
-
-$$
-Q = \begin{cases} \\
-\min\left(Q_{min}, \; \frac{V_t}{\Delta t}\right) & if \; F \le 2 \cdot L_c \\
-Q_{min} + \left( Q_{n,adj}  - Q_{min} \right) \cdot \frac{F - 2 \cdot L_c}{L_n - 2 \cdot L_c} & if \; 2 \cdot L_c \lt F \le L_n \\
-Q_{n,adj} & if \; L_n \lt F \le  L_{n,adj} \\
-Q_{n,adj}  + (Q_{nd} - Q_{n,adj}) \cdot \frac{F - L_{n,adj}}{L_f - L_{n,adj}} & if \; L_{n,adj} \lt F \le L_f \\
-\max \left( \left( F - L_f -0.01 \right) \cdot \frac{S}{\Delta t} , \; Q_{max} \right) & if \; F \gt L_f \\
-\end{cases}
-$$
-where $\Delta t$ is the duration of a time step in seconds (for a daily simulation it would be 86400 s), and
-$$
-Q_{max} = \min \left( Q_{nd} , \; \max \left( 1.2 \cdot I , \, Q_{n,adj} \right) \right)
-$$
-
-Finally, the following condition prevents the outflow from being too large compared to the inflow.
-
-$$
-Q = \min \left( Q , \max \left( I , Q_{n,adj} \right) \right) \quad \text{if} \quad Q > 1.2 \cdot I \quad \text{and} \quad L_{n,adj} < F < L_f
-$$
-
-***
-<font color='red'>
-$$
-Q = \begin{cases} \\
-Q_{min} & if \; F \le 2 \cdot L_c \\
-Q_{min} + \left( Q_{n,adj}  - Q_{min} \right) \cdot \frac{F - 2 \cdot L_c}{L_n - 2 \cdot L_c} & if \; 2 \cdot L_c \lt F \le L_n \\
-Q_{n,adj} & if \; L_n \lt F \le  L_{n,adj} \\
-\min \left( Q_{n,adj}  + (Q_{nd} - Q_{n,adj}) \cdot \frac{F - L_{n,adj}}{L_f - L_{n,adj}} , \; \max \left( 1.2 \cdot I , \; Q_{n,adj} \right) \right) & if \; L_{n,adj} \lt F \le L_f \\
-\max \left( \left( F - L_f \right) \cdot \frac{S}{\Delta t} , \; \min \left( Q_{nd} , \; \max \left( 1.2 \cdot I , \, Q_{n,adj} \right) \right) \right) & if \; F \gt L_f \\
+Q_t =
+\begin{cases}
+\max \left( Q_n \frac{V_t}{V_f}, Q_{min} \right) & \text{if } V_t < V_c \\
+Q_n \frac{V_c}{V_f} + \left( \frac{V_t - V_c}{V_e - V_c} \right)^2 \left( Q_f - Q_n \frac{V_c}{V_f} \right) & \text{if } I_t < Q_f \text{ and } V_c \leq V_t < V_e \\
+Q_f & \text{if }  I_t < Q_f \text{ and } V_t \geq V_e  \\
+Q_n \frac{V_c}{V_f} + \frac{V_t - V_c}{V_f - V_c} \left( Q_f - Q_n \frac{V_c}{V_f} \right) & \text{if } I_t \geq Q_f \text{ and }  V_c \leq V_t < V_f \\
+Q_f + k \frac{V_t - V_f}{V_e - V_f} \left( I_t - Q_f \right) & \text{if } I_t \geq Q_f \text{ and } V_f \leq V_t < V_e  \\
+I_t & \text{if } I_t \geq Q_f \text{ and } V_t \geq V_e
 \end{cases}
 $$
 
-where $\Delta t$ is the duration of a time step in seconds (for a daily simulation it would be 86400 s). Finally, the following condition prevents the reservoir from emptying below $L_c$ or from overtopping.
+where $k$ is a release coefficient that modulates the release in the emergency zone when the flood inflow is exceeded. It is a function of catchment area ($A$ in m²) and flood volume (in m³), and it reflects the amount of average rainfall over the catchment that can be stored in the flood and emergency zones. If the reservoir is able to store 200 mm of rainfall, $k$ becomes zero and the emergency release is equal to the flood outflow. Larger values of $k$ indicate a smaller regulation capacity and larger releases.
 
-$$
-Q = \max \left( \min \left( Q , \; \frac{ \left( F - L_c \right) \cdot S}{\Delta t} \right) , \; \frac{ \left( F - 1 \right) \cdot S}{\Delta t} \right)
-$$
+$$k = \max \left(1 - \frac{1}{0.2} \cdot \frac{V_{tot} - V_f}{A}, 0 \right)$$
 
-<font color='red'>**Changes**</font>
-* <font color='red'>When $F \le 2 \cdot L_c$, I've removed the minimum limitation because I apply it at the very end. Apart from that, the limitation is now $\frac{V_t - V_c}{\Delta t}$ instead of simply $\frac{V_t}{\Delta t}$, so that the reservoir storage is never below the conservative limit.</font>
-* <font color='red'>When $L_{n,adj} \lt F \le L_f$, I've added the limitation that was previously done in the end of the routine, since it only applies to this storage zone. On top of it, I have changed the limitation to $\max \left( 1.2 \cdot I , \, Q_{n,adj} \right)$ instead of $\max \left( I , \, Q_{n,adj} \right)$ to be coherent with the rule in the following storage zone.</font>
-* <font color='red'>When $F \gt L_f$, I've removed the $\frac{0.01 \cdot S}{\Delta t}$ reduction of the outflow, because I don't understand its purpose and a 1% of the total volume can be a very large discharge if released in a single time step.</font>
-* <font color='red'>I've added a condition at the end of the routine to make sure that the storage stays between the conservative limit and the total capacity.</font>
-</font>
-***
+A visual representation of the routine can be seen in the figure below. The blue line represents the reservoir release under normal conditions, whereas the orange line the release in case of a flood event. For a given relative filling, the release is always smaller under normal conditions.
 
-***
-<font color='green'>
-$$
-Q = \begin{cases} \\
-Q_{min} & if \; F \le 2 \cdot L_c \\
-Q_{min} + \left( Q_{n,adj}  - Q_{min} \right) \cdot \frac{F - 2 \cdot L_c}{L_n - 2 \cdot L_c} & if \; 2 \cdot L_c \lt F \le L_n \\
-Q_{n,adj} & if \; L_n \lt F \le  L_{n,adj} \\
-\min \left( Q_{n,adj}  + (Q_{nd} - Q_{n,adj}) \cdot \frac{F - L_{n,adj}}{L_f - L_{n,adj}} , \; \max \left( 1.2 \cdot I , \; Q_{n,adj} \right) \right) & if \; L_{n,adj} \lt F \le L_f \\
-\max \left( Q_{nd} , \; I \right) & if \; F \gt L_f \\
-\end{cases}
-$$
+<img src="../media/reservoirs_routine.png" alt="Reservoirs operation" width="400">
 
-where $\Delta t$ is the duration of a time step in seconds (for a daily simulation it would be 86400 s). Finally, the following condition prevents the reservoir from emptying below $L_c$ or from overtopping.
+***Figure 1.** Scheme of the reservoir routine.*
 
-$$
-Q = \max \left( \min \left( Q , \; \frac{ \left( F - L_c \right) \cdot S}{\Delta t} \right) , \; \frac{ \left( F - 1 \right) \cdot S}{\Delta t} \right)
-$$
+### Input files
 
-<font color='green'>**Changes**</font>
-* <font color='green'>When $F \le 2 \cdot L_c$, I've removed the minimum limitation because I apply it at the very end. Apart from that, the limitation is now $\frac{V_t - V_c}{\Delta t}$ instead of simply $\frac{V_t}{\Delta t}$, so that the reservoir storage is never below the conservative limit.</font>
-* <font color='green'>When $L_{n,adj} \lt F \le L_f$, I've added the limitation that was previously done in the end of the routine, since it only applies to this storage zone. On top of it, I have changed the limitation to $\max \left( 1.2 \cdot I , \, Q_{n,adj} \right)$ instead of $\max \left( I , \, Q_{n,adj} \right)$ to be coherent with the rule in the following storage zone.</font>
-* <font color='green'>When $F \gt L_f$, I've removed the $\frac{0.01 \cdot S}{\Delta t}$ reduction of the outflow, because I don't understand its purpose and a 1% of the total volume can be a very large discharge if released in a single time step.</font>
-* <font color='green'>I've added a condition at the end of the routine to make sure that the storage stays between the conservative limit and the total capacity.</font>
-</font>
-***
+Reservoirs are simulated as points in the channel network. LISFLOOD needs a **map of the location of the dams** (NetCDF or PCRaster format) which defines their reservoir ID. This ID will be used to link each reservoir with its characteristics. In the routine, LISFLOOD will calculate the reservoir inflow as the channel flow in all pixels upstream of the reservoir.
 
+The **three storage limits** and **two characteristic flows** need to be defined for each reservoir. They are provided as space-separated TXT files, where the first column indicates the reservoir ID and the second column the value of the attribute. For instance, the example below shows the table of flood limit (relative filling):
+
+```txt
+1 0.78
+2 0.75
+3 0.90
+...
+```
+
+The functioning of the reservoirs can be adjusted by tuning two **reservoir parameters**: the flood limit ($V_f$) and the flood outflow factor ($\alpha$). The values of these parameters can be fed either as TXT files (as in the example above) or NetCDF maps.
+
+The table below summarises the inputs required by the reservoir routine.
+
+***Table 1.** Input requirements for the reservoir routine.*
+
+| **Settings file** | **Type** | **Description** | **Default_name** | **Units** | **Remarks** |
+|-------------------|----------|-----------------|------------------|-----------|-------------|
+| `ReservoirSites`  | map      | Reservoir location and ID | *reservoirs.nc* | -  | Nominal   |
+| `ReservoirTotalStorage`| table | Reservoir capacity | *res_storage.txt* | $m^3$ |           |
+| `ReservoirFloodLimit` | map/table | Relative storage that defines the flood storage limit | *res_flood_limit.(txt/nc)* | - | Calibration parameter. Default value 0.75 |
+| `ReservoirFloodOutflow` | table | Flood outflow | *res_flood_outflow.txt* | $\frac{m^3}{s}$ | 100-year return period of inflow |
+| `ReservoirFloodOutflowFactor`| map/table | Modifier of the flood outflow | *res_outflow_factor.(txt/nc)* | - | Calibration parameter. Default value 0.30 |
+| `ReservoirNormalOutflow` | table | Normal outflow | *res_normal_outflow.txt* | $\frac{m^3}{s}$ | Average inflow |
+| `ReservoirMinOutflow` | table | Minimum outflow | *res_min_outflow_tx* | $\frac{m^3}{s}$ | Environmental flow |
+| `ReservoirInitialFill` | map/table | Relative filling at the beginning of the simulation | -9999 | - | -9999 assumes 80% of the flood limit |
+| `upAreaTrans` | map | Upstream area | *upArea.nc* | $m^2$ | Used to estimate the release coefficient $k$ |
+
+
+### Output files
+
+If the option `repsimulateReservoirs` is active (see Section [Settings](#Settings)), the reservoir routine produces 3 additional time series (TSS format) and one map, as listed in the following table:
+
+***Table 2.** Outputs of the reservoir routine.*                    
+
+| **Settings file** | **Format** | **Description** | **Default_name** | **Units** |
+|-------------------|----------|-----------------|------------------|-----------|
+| `ReservoirInfowTS` | TSS | Inflow time series | res_inflow.tss | $\frac{m^3}{s}$ |
+| `ReservoirOutflowTS` | TSS | Outflow time series | res_outflow.tss | $\frac{m^3}{s}$ |
+| `ReservoirFillTS` | TSS | Time series of reservoir filling | res_fill.tss | - |
+| `ReservoirFillState` | NetCDF | Reservoir filling at the end of the simulation | res_fill.nc | - |
+
+> **Note**. The map of reservoir filling at the end of a simulation can serve as the initial condition for a subsequent simulation by using the `ReservoirInitialFill` option (see Section [Settings](#Settings)).
+
+
+### Settings
+
+The reservoir routine is optional and can be activated with the `simulateReservoirs` option in the `lfoptions` section of the settings file in the settings file. To save the outputs of the reservoir simulation, activate the option `repsimulateReservoirs`.
+
+```xml
+<lfoptions>
+    [...]
+    <setoption choice="1" name="simulateReservoirs"/>
+    <setoption choice="1" name="repsimulateReservoirs"/>
+    [...]
+</lfoptions>
+```
+
+The values of the two reservoir parameters and the reservoir initial condition are defined within the `lfuser` section of the settings file:
+
+```xml
+<lfuser>
+    [...]
+    <!--Reservoir model parameters-->
+    <textvar name="ReservoirFloodStorage" value="$(PathMaps)/res_flood_limit.nc"/>
+    <textvar name="ReservoirFloodOutflowFactor" value="$(PathMaps)/res_flood_outflow_factor.nc"/>
     
-Summary of symbols:
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$S$:		Reservoir storage capacity $[m^3]$
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$F$:		Reservoir relative filling (1 at total storage capacity) \[-\]
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$I$:	Reservoir inflow $[\frac{m^3} {s}]$
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$Q$:	Reservoir outflow $[\frac{m^3} {s}]$
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$L_c$:	Conservative storage limit \[-\]
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$L_n$:	Normal storage limit \[-\]
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$L_f$:	Flood storage limit \[-\]
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$Q_{min}$:	Minimum outflow $[\frac{m^3} {s}]$
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$Q_{n}$:	Normal outflow $[\frac{m^3} {s}]$
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$Q_{nd}$:	Non-damaging outflow  $[\frac{m^3} {s}]$
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$\alpha$:	calibration parameter used to modulate $L_n$ \[-\] (`adjust_Normal_FLood` in the settings file)
-<br>&nbsp;&nbsp;&nbsp;&nbsp;$\beta$:	calibration parameter used to modulate $Q_{n}$ \[-\] (`ReservoirRnormqMult` in the settings file)
-
->**Note**. The reservoir outflow is calculated using the same computational time interval used for the channel routing.
-
-![Reservoirs_operation](../media/reservoirs_routine.png)
-
-***Figure:*** *Schematic of the reservoir routine.*
-
-### Preparation of input data 
-
-For the simulation of reservoirs a number of additional input files are necessary. 
-
-1. The locations of the reservoirs are defined on a (nominal) map called *res.map*. It is important that all reservoirs are located on a channel pixel (you can verify this by displaying the reservoirs map on top of the channel map). Also, since each reservoir receives its inflow from its upstream neighbouring channel pixel, you may want to check if each reservoir has any upstream channel pixels at all; if not, the reservoir will gradually empty during a model run!. 
-2. The management of the reservoirs is described by 7 tables (TXT files). Each of these tables should contain as many lines as reservoirs, and each line contains two columns (tab separated) with the reservoir ID and the value of the corresponding characteristic. An example of such text file is as follows:
-
-```text
-1	77.2
-2	79.9
+    <!--Reservoir initial condition-->
+    <textvar name="ReservoirInitialFill" value="res_fill_19900102.nc">
+        <comment>
+            Initial reservoir fill fraction
+            -9999 sets initial fill to normal storage limit
+        </comment>
+    </textvar>
+    [...]
+</lfuser>
 ```
 
-The following table lists all required input:
-
-***Table:*** *Input requirements for the reservoir routine.*
-
-| **Maps**    | **Default name**   | **Description** | **Units**   | **Remarks** |
-|-------------|--------------------|-----------------|-------------|-------------|
-| ReservoirSites | res.map     | reservoir locations  | \-          | nominal     |
-| TabTotStorage | rtstor.txt  | reservoir storage capacity  | $[m^3]$ |             |
-| TabConservativeStorageLimit | rclim.txt   | conservative storage limit | \-          | fraction of storage |
-| TabNormalSt orageLimit| rnlim.txt   | normal storage limit     | \-          | capacity    |
-| TabFloodStorageLimit | rflim.txt   | flood storage limit      | \-          |             |
-| TabMinOutflowQ | rminq.txt   | minimum outflow    | $[m^3]$ |             |
-| TabNormalOutflowQ | rnormq.txt  | normal outflow     | $[m^3]$ |             |
-| TabNonDamagingOutflowQ | rndq.txt    | non-damaging outflow | $[m^3]$ |             |
-
-When you create the map with the reservoir sites, pay special attention to the following: if a reservoir is on the most downstream cell (i.e. the outlet of the catchment, see Figure below), the reservoir routine may produce erroneous output. In particular, the mass balance errors cannot be calculated correctly in that case. The same applies if you simulate only a sub-catchment of a larger map (by selecting the subcatchment in the mask map). This situation can usually be avoided by extending the mask map donwstream by one cell in downstream direction.
-
-![Placement of the reservoirs](../media/image42.png)
-
-***Figure:*** *Placement of the reservoirs: reservoirs on the outlet (left) result in erroneous behavior of the reservoir routine.*
-
-### Preparation of settings file
-
-All in- and output files need to be defined in the settings file. If you are using a default LISFLOOD settings template, all file definitions are already defined in the `lfbinding` element. Just make sure that the map with the reservoir locations is in the "maps" directory, and all tables in the "tables" directory. 
-Finally, you have to tell LISFLOOD that you want to simulate reservoirs. To do this, add the following statement to the `lfoptions` element:
+The reservoir characteristics and the output files are defined in the `lfbinding` section of the settings file:
 
 ```xml
-	<setoption name="simulateReservoirs" choice="1" />
+<lfbinding>
+    [...]
+    <!--Reservoir characteristics-->
+    <textvar name="ReservoirSites" value="$(PathMaps)/reservoirs_Global_03min_new.nc"/>
+    <textvar name="ReservoirTotalStorage" value="$(PathTables)/res_storage.txt"/>
+    <textvar name="ReservoirFloodOutflow" value="$(PathTables)/res_100yr_inflow.txt"/>
+    <textvar name="ReservoirNormalOutflow" value="$(PathTables)/res_avg_inflow.txt"/>
+    <textvar name="ReservoirMinOutflow" value="$(PathTables)/res_min_outflow.txt"/>
+    
+    <!--Reservoir outputs-->
+    <textvar name="ReservoirInflowTS" value="$(PathOut)/res_inflow.tss"/>
+    <textvar name="ReservoirOutflowTS" value="$(PathOut)/res_outflow.tss"/>
+    <textvar name="ReservoirFillTS" value="$(PathOut)/res_fill.tss"/>
+    <textvar name="ReservoirStorageM3TS" value="$(PathOut)/res_storage.tss"/>
+    <textvar name="ReservoirFillState" value="$(PathOut)/res_fill_20221231.nc"/>
+    
+</lfbinding>
 ```
 
-Now you are ready to run the model. If you want to compare the model results both with and without the inclusion of reservoirs, you can switch off the simulation of reservoirs either by:
-
-1.  Removing the `simulateReservoirs` statement from the `lfoptions` element, or
-2.  changing it into `\<setoption name="simulateReservoirs" choice="0" /\>`.
-
-Both have exactly the same effect. You don't need to change anything in either `lfuser` or `lfbinding`; all file definitions here are simply ignored during the execution of the model.
-
-### Reservoir output files
-
-The reservoir routine produces 3 additional time series and one map, as listed in the following table:
-
-***Table:***  *Output of reservoir routine.*                    
-
-| **Maps / Time series** | **Default name** | **Description**                       | **Units**       | **Remarks** |
-| ---------------------- | ---------------- | ------------------------------------- | --------------- | ----------- |
-| ReservoirFillState     | rsfilxxx.xxx     | reservoir fill at last time step[^10] | \-              |             |
-| ReservoirInflowTS      | qresin.tss       | inflow into reservoirs                | $\frac{m^3}{s}$ |             |
-| ReservoirOutflowTS     | qresout.tss      | outflow out of reservoirs             | $\frac{m^3}{s}$ |             |
-| ReservoirFillTS        | resfill.tss      | reservoir fill                        | \-              |             |
-                                                     
-Note that you can use the map with the reservoir fill at the last time step to define the initial conditions of a succeeding simulation, e.g.:
-
-```xml
-	<textvar name="ReservoirInitialFillValue" value="/mycatchment/rsfil000.730">
-```
-
-[🔝](#top)
+[🔝](#top
