@@ -1,12 +1,10 @@
 ## Reservoirs
 
->**To add**. The reservoir routine extracts the inflow from all pixels upstream. Reservoirs can be placed in the outlet of the catchment, and do not need to be moved one pixel downstream.
-
 ### Introduction
 
-This page describes the LISFLOOD reservoir routine, and how it is used.
+This page describes how LISFLOOD-OS models reservoirs. It starts with a [description of the reservoir routine](#Description-of-the-routine) introduced in LISFLOOD-OS version 5. Once the theory behind is understood, the subsequent sections explain the [input files](#Input-files), the [output files](#Output-files), and how it is configured in the [settings](#Settings) file.
 
-### Description of the reservoir routine 
+### Description of the routine 
 
 The LISFLOOD reservoir routine is, since version 5, an adaptaion of [Hanazaki et al. (2022)](https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2021MS002944). In this routine, the reservoir release is a function of both the storage ($V_t$) and inflow ($I_t$) at the current time step.
 
